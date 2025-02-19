@@ -42,6 +42,17 @@ set(SNAKE_SOURCES
 # This won't produce a real .gb file. It just lets CLion see includes.
 add_executable(gbdk_snake_dummy ${SNAKE_SOURCES})
 
+# Tell the host compiler to "pretend" it's SDCC building for Game Boy
+#target_compile_definitions(gbdk_snake_dummy
+#        PRIVATE
+#        __PORT_gb=1
+#        __SDCC=1
+##        INT8="signed char"
+##        UINT8="unsigned char"
+##        INT16="short"
+##        UINT16="unsigned short"
+#)
+
 # The -Wa-l, -Wl-m, -Wl-j flags generate additional map/listing data.
 # You can omit them if you don’t need the extra debug info.
 

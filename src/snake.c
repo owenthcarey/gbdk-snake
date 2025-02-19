@@ -14,9 +14,9 @@ static const unsigned char snake_head_tile[] = {
 // Simple snake representation
 #define MAX_SNAKE_LENGTH 20
 
-static UINT8 snake_x[MAX_SNAKE_LENGTH];
-static UINT8 snake_y[MAX_SNAKE_LENGTH];
-static UINT8 snake_length;
+static uint8_t snake_x[MAX_SNAKE_LENGTH];
+static uint8_t snake_y[MAX_SNAKE_LENGTH];
+static uint8_t snake_length;
 static Direction current_dir;
 
 void init_snake(void) {
@@ -64,7 +64,7 @@ void change_direction(Direction new_dir) {
 
 void update_snake(void) {
     // Shift body
-    for (UINT8 i = snake_length - 1; i > 0; i--) {
+    for (uint8_t i = snake_length - 1; i > 0; i--) {
         snake_x[i] = snake_x[i - 1];
         snake_y[i] = snake_y[i - 1];
     }

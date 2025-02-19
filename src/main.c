@@ -23,12 +23,12 @@ void main(void) {
 
     init_snake(); // Initialize snake data
 
-    UINT8 frameCounter = 0;
+    uint8_t frameCounter = 0;
 
     // Main loop
     while(1) {
         // Read Joypad
-        UINT8 keys = joypad();
+        uint8_t keys = joypad();
         if (keys & J_LEFT) {
             change_direction(DIR_LEFT);
         } else if (keys & J_RIGHT) {
@@ -52,4 +52,3 @@ void main(void) {
         wait_vbl_done();
     }
 }
-
