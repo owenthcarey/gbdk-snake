@@ -13,5 +13,6 @@ typedef enum {
 void init_snake(void);
 void change_direction(Direction new_dir);
 void update_snake(void);
+uint8_t is_game_over(void);
 
 #endif

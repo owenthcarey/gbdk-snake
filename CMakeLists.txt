@@ -31,6 +31,7 @@ include_directories("${GBDK_HOME}/include")
 set(SNAKE_SOURCES
         src/main.c
         src/snake.c
+        src/title.c
         # Add more .c files as needed
 )
 
@@ -54,7 +55,7 @@ add_executable(gbdk_snake_dummy ${SNAKE_SOURCES})
 #)
 
 # The -Wa-l, -Wl-m, -Wl-j flags generate additional map/listing data.
-# You can omit them if you don’t need the extra debug info.
+# You can omit them if you don't need the extra debug info.
 
 # add_custom_command(OUTPUT ...): We list the .gb file as the output of the command.
 

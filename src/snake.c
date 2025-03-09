@@ -3,7 +3,7 @@
 
 /*
  * Note: Warnings like "conditional flow changed by optimizer: so said EVELYN the modified DOG"
- * come from SDCC’s optimizer and are harmless.
+ * come from SDCC's optimizer and are harmless.
  */
 
 // Forward declaration to fix implicit declaration warnings.
@@ -16,7 +16,7 @@ static void game_over(void);
 #define GRID_WIDTH  20
 #define GRID_HEIGHT 18
 
-// The snake’s positions (in pixels, always multiples of 8)
+// The snake's positions (in pixels, always multiples of 8)
 static uint8_t snake_x[MAX_SNAKE_LENGTH];
 static uint8_t snake_y[MAX_SNAKE_LENGTH];
 static uint8_t snake_length;
@@ -25,6 +25,9 @@ static Direction current_dir;
 // Food position (in pixels)
 static uint8_t food_x;
 static uint8_t food_y;
+
+// Game state
+static uint8_t game_over_flag = 0;
 
 // -----------------------------------------------------------------------------
 // Background Tile Indices
@@ -92,7 +95,7 @@ static uint8_t snake_collides(uint8_t x, uint8_t y) {
 }
 
 // -----------------------------------------------------------------------------
-// Food Management: Choose a new cell (that isn’t occupied by the snake)
+// Food Management: Choose a new cell (that isn't occupied by the snake)
 // and update the shadow grid accordingly.
 // -----------------------------------------------------------------------------
 static void spawn_food(void) {
@@ -138,7 +141,7 @@ void init_snake(void) {
     snake_x[2] = 64;  snake_y[2] = 72;
     current_dir = DIR_RIGHT;
 
-    // Update the snake’s cells in the shadow grid.
+    // Update the snake's cells in the shadow grid.
     for(uint8_t i = 0; i < snake_length; i++) {
         uint8_t col = snake_x[i] / 8;
         uint8_t row = snake_y[i] / 8;
@@ -150,6 +153,9 @@ void init_snake(void) {
 
     // Draw the entire background from the shadow grid.
     update_entire_bg();
+
+    // Reset game over flag
+    game_over_flag = 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -241,8 +247,13 @@ void update_snake(void) {
 }
 
 // -----------------------------------------------------------------------------
-// Game Over: Simply restart the game.
+// Game Over: Set the game over flag
 // -----------------------------------------------------------------------------
 static void game_over(void) {
-    init_snake();
+    game_over_flag = 1;
+}
+
+// Public function to check if the game is over
+uint8_t is_game_over(void) {
+    return game_over_flag;
 }
