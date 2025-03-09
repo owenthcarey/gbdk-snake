@@ -41,7 +41,7 @@ set(SNAKE_SOURCES
 
 # Create a dummy executable for CLion's indexer
 # This won't produce a real .gb file. It just lets CLion see includes.
-add_executable(gbdk_snake_dummy ${SNAKE_SOURCES})
+add_executable(gbdk_snake_dummy ${SNAKE_SOURCES} src/save.c)
 
 # Tell the host compiler to "pretend" it's SDCC building for Game Boy
 #target_compile_definitions(gbdk_snake_dummy
@@ -57,18 +57,36 @@ add_executable(gbdk_snake_dummy ${SNAKE_SOURCES})
 # The -Wa-l, -Wl-m, -Wl-j flags generate additional map/listing data.
 # You can omit them if you don't need the extra debug info.
 
-# add_custom_command(OUTPUT ...): We list the .gb file as the output of the command.
+# First compile save.c with -Wf-ba0 to place it in SRAM bank 0
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/save.o
+        COMMAND ${GBDK_HOME}/bin/lcc
+        -Wa-l
+        -Wl-m
+        -Wl-j
+        -Wf-ba0
+        -c
+        -o save.o
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/save.c
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/save.c
+        COMMENT "Compiling save.c with SRAM bank 0"
+)
 
+# add_custom_command(OUTPUT ...): We list the .gb file as the output of the command.
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/snake.gb
         COMMAND ${GBDK_HOME}/bin/lcc
         -Wa-l
         -Wl-m
         -Wl-j
+        -Wm-yt3  # MBC1+RAM+BATTERY
+        -Wm-ya1  # 8KB RAM
         -o snake.gb
         ${SNAKE_SOURCES}
+        ${CMAKE_CURRENT_BINARY_DIR}/save.o
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        DEPENDS ${SNAKE_SOURCES}
+        DEPENDS ${SNAKE_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/save.o
         COMMENT "Building snake.gb with GBDK-2020"
 )
 

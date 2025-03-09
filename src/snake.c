@@ -1,4 +1,5 @@
 #include "snake.h"
+#include "save.h"
 #include <string.h>
 
 /*
@@ -28,6 +29,10 @@ static uint8_t food_y;
 
 // Game state
 static uint8_t game_over_flag = 0;
+
+// Score tracking
+static uint8_t current_score = 0;
+static uint8_t high_score = 0;
 
 // -----------------------------------------------------------------------------
 // Background Tile Indices
@@ -121,7 +126,7 @@ static void update_entire_bg(void) {
 }
 
 // -----------------------------------------------------------------------------
-// Initialize the snake and game state.
+// Initialize the snake game
 // -----------------------------------------------------------------------------
 void init_snake(void) {
     // Load our 4 background tiles into VRAM (tile indices 0..3)
@@ -154,8 +159,18 @@ void init_snake(void) {
     // Draw the entire background from the shadow grid.
     update_entire_bg();
 
-    // Reset game over flag
+    // Reset game over flag and current score
     game_over_flag = 0;
+    current_score = 0;
+    
+    // Load high score from SRAM
+    if (has_save_data()) {
+        high_score = load_high_score();
+    } else {
+        high_score = 0;
+        // Initialize save data with a high score of 0
+        save_high_score(0);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -168,6 +183,19 @@ void change_direction(Direction new_dir) {
         (current_dir == DIR_DOWN && new_dir == DIR_UP))
         return;
     current_dir = new_dir;
+}
+
+// -----------------------------------------------------------------------------
+// Check if the snake collides with itself
+// -----------------------------------------------------------------------------
+static uint8_t snake_collides_with_self(void) {
+    // Check if the head collides with any part of the body
+    for (uint8_t i = 1; i < snake_length; i++) {
+        if (snake_x[0] == snake_x[i] && snake_y[0] == snake_y[i]) {
+            return 1;  // Collision detected
+        }
+    }
+    return 0;  // No collision
 }
 
 // -----------------------------------------------------------------------------
@@ -207,10 +235,22 @@ void update_snake(void) {
             break;
     }
 
+    // Check if the snake collides with itself
+    if (snake_collides_with_self()) {
+        game_over();
+        return;
+    }
+
     // Determine if the snake has eaten the food.
     uint8_t ate_food = (snake_x[0] == food_x && snake_y[0] == food_y);
 
     if (ate_food) {
+        // Increase score
+        current_score++;
+        
+        // Update high score if needed
+        update_high_score();
+        
         if(snake_length < MAX_SNAKE_LENGTH) {
             // Grow the snake by duplicating the old tail cell.
             snake_x[snake_length] = old_tail_x;
@@ -251,9 +291,34 @@ void update_snake(void) {
 // -----------------------------------------------------------------------------
 static void game_over(void) {
     game_over_flag = 1;
+    
+    // Save high score when game ends
+    if (current_score > high_score) {
+        high_score = current_score;
+        // Make sure to save the high score to SRAM
+        save_high_score(high_score);
+    }
 }
 
 // Public function to check if the game is over
 uint8_t is_game_over(void) {
     return game_over_flag;
+}
+
+// Get the current score
+uint8_t get_score(void) {
+    return current_score;
+}
+
+// Get the high score
+uint8_t get_high_score(void) {
+    return high_score;
+}
+
+// Update the high score if the current score is higher
+void update_high_score(void) {
+    if (current_score > high_score) {
+        high_score = current_score;
+        save_high_score(high_score);
+    }
 }
