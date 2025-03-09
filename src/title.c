@@ -1,5 +1,7 @@
 #include "title.h"
+#include "palettes.h"
 #include <gb/gb.h>
+#include <gb/cgb.h>
 #include <string.h>
 
 // Title screen tile data (16 tiles total)
@@ -91,6 +93,27 @@ const unsigned char title_border_map[] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
+// Title screen color attributes for GBC
+const unsigned char title_attr_map[] = {
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
+};
+
 // "SNAKE GAME" title text
 const unsigned char title_text[] = {3, 4, 5, 6, 7, 0, 8, 5, 9, 7};
 
@@ -99,6 +122,9 @@ const unsigned char press_start_text[] = {10, 11, 7, 3, 3, 0, 3, 12, 5, 11, 12};
 
 // "TO BEGIN" text
 const unsigned char to_begin_text[] = {12, 15, 0, 13, 7, 8, 14, 4};
+
+// Text color attributes for GBC
+const unsigned char text_attr[] = {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
 
 // Animation variables
 static uint8_t animation_frame = 0;
@@ -111,17 +137,57 @@ void init_title_screen(void) {
     // Set up the border
     set_bkg_tiles(0, 0, 20, 18, title_border_map);
     
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        // Initialize color palettes
+        init_palettes();
+        
+        // Set color attributes for the title screen
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(0, 0, 20, 18, title_attr_map);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
+    
     // Draw the title text "SNAKE GAME" at row 4
     set_bkg_tiles(5, 4, 10, 1, title_text);
+    
+    // Set color attributes for the title text
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(5, 4, 10, 1, text_attr);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
     
     // Draw "PRESS START" at row 10
     set_bkg_tiles(5, 10, 11, 1, press_start_text);
     
+    // Set color attributes for "PRESS START"
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(5, 10, 11, 1, text_attr);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
+    
     // Draw "TO BEGIN" at row 12
     set_bkg_tiles(6, 12, 8, 1, to_begin_text);
     
+    // Set color attributes for "TO BEGIN"
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(6, 12, 8, 1, text_attr);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
+    
     // Draw a snake head for decoration
     set_bkg_tiles(10, 7, 1, 1, &title_tiles[2]);
+    
+    // Set color attributes for the snake head
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        unsigned char snake_attr = SNAKE_PALETTE;
+        set_bkg_tiles(10, 7, 1, 1, &snake_attr);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 uint8_t update_title_screen(void) {
@@ -139,6 +205,13 @@ uint8_t update_title_screen(void) {
         } else {
             // Show the text
             set_bkg_tiles(5, 10, 11, 1, press_start_text);
+            
+            // Set color attributes for "PRESS START"
+            if (_cpu == CGB_TYPE) {
+                VBK_REG = 1;  // Switch to attribute bank
+                set_bkg_tiles(5, 10, 11, 1, text_attr);
+                VBK_REG = 0;  // Switch back to tile bank
+            }
         }
     }
     

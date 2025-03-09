@@ -4,6 +4,7 @@
 #include "snake.h"
 #include "title.h"
 #include "save.h"
+#include "palettes.h"
 
 #define SNAKE_UPDATE_INTERVAL 10  // Move the snake every 10 frames
 
@@ -97,6 +98,16 @@ void display_score(void) {
     unsigned char score_indices[] = {24, 25, 26, 27, 28, 29};
     set_bkg_tiles(1, 0, 6, 1, score_indices);
     
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        unsigned char text_attrs[6];
+        memset(text_attrs, TEXT_PALETTE, 6);
+        
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(1, 0, 6, 1, text_attrs);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
+    
     // Get current score
     uint8_t score = get_score();
     
@@ -113,6 +124,16 @@ void display_score(void) {
     display_digits[0] = 40 + score_digits[0];
     display_digits[1] = 40 + score_digits[1];
     set_bkg_tiles(8, 0, 2, 1, display_digits);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        unsigned char digit_attrs[2];
+        memset(digit_attrs, TEXT_PALETTE, 2);
+        
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(8, 0, 2, 1, digit_attrs);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 // Function to display the high score
@@ -123,6 +144,16 @@ void display_high_score(void) {
     // Display "HI:" text at top of screen
     unsigned char hi_indices[] = {30, 31, 32};
     set_bkg_tiles(12, 0, 3, 1, hi_indices);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        unsigned char text_attrs[3];
+        memset(text_attrs, TEXT_PALETTE, 3);
+        
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(12, 0, 3, 1, text_attrs);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
     
     // Get high score
     uint8_t hi_score = get_high_score();
@@ -137,6 +168,16 @@ void display_high_score(void) {
     display_digits[0] = 40 + hi_score_digits[0];
     display_digits[1] = 40 + hi_score_digits[1];
     set_bkg_tiles(16, 0, 2, 1, display_digits);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        unsigned char digit_attrs[2];
+        memset(digit_attrs, TEXT_PALETTE, 2);
+        
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(16, 0, 2, 1, digit_attrs);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 void main(void) {
@@ -144,6 +185,11 @@ void main(void) {
     SHOW_BKG;       // Show the background layer.
     SHOW_SPRITES;   // Enable sprites.
     DISPLAY_ON;     // Turn on the display.
+    
+    // Initialize color palettes for GBC
+    if (_cpu == CGB_TYPE) {
+        init_palettes();
+    }
 
     // Initialize high score from SRAM at startup
     if (has_save_data()) {
@@ -191,6 +237,16 @@ void main(void) {
                     display_indices[i] = 16 + game_over_indices[i];
                 }
                 set_bkg_tiles(6, 8, 8, 1, display_indices);
+                
+                // Set color attributes for GBC
+                if (_cpu == CGB_TYPE) {
+                    unsigned char gameover_attrs[8];
+                    memset(gameover_attrs, GAMEOVER_PALETTE, 8);
+                    
+                    VBK_REG = 1;  // Switch to attribute bank
+                    set_bkg_tiles(6, 8, 8, 1, gameover_attrs);
+                    VBK_REG = 0;  // Switch back to tile bank
+                }
                 
                 // Update high score display one last time
                 display_high_score();

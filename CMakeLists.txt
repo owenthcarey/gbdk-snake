@@ -32,6 +32,7 @@ set(SNAKE_SOURCES
         src/main.c
         src/snake.c
         src/title.c
+        src/palettes.c
         # Add more .c files as needed
 )
 
@@ -82,6 +83,7 @@ add_custom_command(
         -Wl-j
         -Wm-yt3  # MBC1+RAM+BATTERY
         -Wm-ya1  # 8KB RAM
+        -Wm-yc   # Enable GBC features
         -o snake.gb
         ${SNAKE_SOURCES}
         ${CMAKE_CURRENT_BINARY_DIR}/save.o

@@ -1,6 +1,9 @@
 #include "snake.h"
 #include "save.h"
+#include "palettes.h"
 #include <string.h>
+#include <gb/gb.h>
+#include <gb/cgb.h>
 
 /*
  * Note: Warnings like "conditional flow changed by optimizer: so said EVELYN the modified DOG"
@@ -46,10 +49,8 @@ static uint8_t high_score = 0;
 // The 4 tiles (each tile is 16 bytes in 2bpp format)
 static const unsigned char bg_tiles[64] = {
     // Tile 0: Snake head
-    0xFF,0x81,0xBD,0xA5,
-    0xA5,0xBD,0x81,0xFF,
-    0xFF,0xC3,0x99,0xBD,
-    0xBD,0x99,0xC3,0xFF,
+    0xFF,0x81,0xBD,0xA5,0xA5,0xBD,0x81,0xFF,
+    0xFF,0xC3,0x99,0xBD,0xBD,0x99,0xC3,0xFF,
     // Tile 1: Snake body
     0x00,0x00,
     0x3C,0x3C,
@@ -60,26 +61,24 @@ static const unsigned char bg_tiles[64] = {
     0x3C,0x3C,
     0x00,0x00,
     // Tile 2: Food
-    0x3C,0x3C,
+    0x00,0x00,
+    0x18,0x18,
+    0x24,0x24,
     0x42,0x42,
-    0x99,0x99,
-    0xA5,0xA5,
-    0xA5,0xA5,
-    0x99,0x99,
     0x42,0x42,
-    0x3C,0x3C,
-    // Tile 3: Blank
-    0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00
+    0x24,0x24,
+    0x18,0x18,
+    0x00,0x00,
+    // Tile 3: Blank (empty cell)
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
-// -----------------------------------------------------------------------------
-// Shadow grid: our internal representation of the playable area.
-// Each cell holds the tile index (0..3) that should be drawn.
-// -----------------------------------------------------------------------------
-static UBYTE bg_grid[GRID_HEIGHT][GRID_WIDTH];
+// Shadow grid of the background (20x18 cells)
+static unsigned char bg_grid[GRID_HEIGHT][GRID_WIDTH];
+
+// Color attributes for GBC
+static unsigned char bg_attr_grid[GRID_HEIGHT][GRID_WIDTH];
 
 // -----------------------------------------------------------------------------
 // Utility: Simple pseudo-random generator.
@@ -104,25 +103,51 @@ static uint8_t snake_collides(uint8_t x, uint8_t y) {
 // and update the shadow grid accordingly.
 // -----------------------------------------------------------------------------
 static void spawn_food(void) {
-    uint8_t valid = 0;
-    while(!valid) {
-        food_x = (rand8() % GRID_WIDTH) * 8;
-        food_y = (rand8() % GRID_HEIGHT) * 8;
-        if (!snake_collides(food_x, food_y))
-            valid = 1;
+    uint8_t row, col;
+    
+    // Keep trying random positions until we find an empty cell.
+    do {
+        // Choose a random position (avoiding the border)
+        row = (rand8() % (GRID_HEIGHT - 2)) + 1;
+        col = (rand8() % (GRID_WIDTH - 2)) + 1;
+    } while (bg_grid[row][col] != 3);  // Keep trying if not empty
+    
+    // Update the food position.
+    food_x = col * 8;
+    food_y = row * 8;
+    
+    // Update the shadow grid.
+    bg_grid[row][col] = 2;  // food
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        bg_attr_grid[row][col] = FOOD_PALETTE;
     }
-    // Update the cell in the shadow grid
-    uint8_t col = food_x / 8;
-    uint8_t row = food_y / 8;
-    bg_grid[row][col] = 2;  // Food tile
+    
+    // Update just this one cell on the background.
     set_bkg_tiles(col, row, 1, 1, &bg_grid[row][col]);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(col, row, 1, 1, &bg_attr_grid[row][col]);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 // -----------------------------------------------------------------------------
 // Redraw the entire background from the shadow grid (used at init).
 // -----------------------------------------------------------------------------
 static void update_entire_bg(void) {
+    // Update the entire background from the shadow grid.
     set_bkg_tiles(0, 0, GRID_WIDTH, GRID_HEIGHT, &bg_grid[0][0]);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(0, 0, GRID_WIDTH, GRID_HEIGHT, &bg_attr_grid[0][0]);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -136,6 +161,17 @@ void init_snake(void) {
     for(uint8_t row = 0; row < GRID_HEIGHT; row++) {
         for(uint8_t col = 0; col < GRID_WIDTH; col++) {
             bg_grid[row][col] = 3;
+            
+            // Set color attributes for GBC
+            if (_cpu == CGB_TYPE) {
+                // Border cells get the border palette
+                if (row == 0 || row == GRID_HEIGHT-1 || col == 0 || col == GRID_WIDTH-1) {
+                    bg_attr_grid[row][col] = BORDER_PALETTE;
+                } else {
+                    // Interior cells get the background palette
+                    bg_attr_grid[row][col] = BG_PALETTE_GREEN;
+                }
+            }
         }
     }
 
@@ -151,6 +187,11 @@ void init_snake(void) {
         uint8_t col = snake_x[i] / 8;
         uint8_t row = snake_y[i] / 8;
         bg_grid[row][col] = (i == 0) ? 0 : 1;
+        
+        // Set color attributes for GBC
+        if (_cpu == CGB_TYPE) {
+            bg_attr_grid[row][col] = SNAKE_PALETTE;
+        }
     }
 
     // Spawn initial food (which updates its cell in the shadow grid)
@@ -261,7 +302,20 @@ void update_snake(void) {
             uint8_t tail_col = old_tail_x / 8;
             uint8_t tail_row = old_tail_y / 8;
             bg_grid[tail_row][tail_col] = 3;  // blank
+            
+            // Set color attributes for GBC
+            if (_cpu == CGB_TYPE) {
+                bg_attr_grid[tail_row][tail_col] = BG_PALETTE_GREEN;
+            }
+            
             set_bkg_tiles(tail_col, tail_row, 1, 1, &bg_grid[tail_row][tail_col]);
+            
+            // Set color attributes for GBC
+            if (_cpu == CGB_TYPE) {
+                VBK_REG = 1;  // Switch to attribute bank
+                set_bkg_tiles(tail_col, tail_row, 1, 1, &bg_attr_grid[tail_row][tail_col]);
+                VBK_REG = 0;  // Switch back to tile bank
+            }
         }
         // Spawn new food (updates its cell in the shadow grid)
         spawn_food();
@@ -270,20 +324,59 @@ void update_snake(void) {
         uint8_t tail_col = old_tail_x / 8;
         uint8_t tail_row = old_tail_y / 8;
         bg_grid[tail_row][tail_col] = 3;  // blank
+        
+        // Set color attributes for GBC
+        if (_cpu == CGB_TYPE) {
+            bg_attr_grid[tail_row][tail_col] = BG_PALETTE_GREEN;
+        }
+        
         set_bkg_tiles(tail_col, tail_row, 1, 1, &bg_grid[tail_row][tail_col]);
+        
+        // Set color attributes for GBC
+        if (_cpu == CGB_TYPE) {
+            VBK_REG = 1;  // Switch to attribute bank
+            set_bkg_tiles(tail_col, tail_row, 1, 1, &bg_attr_grid[tail_row][tail_col]);
+            VBK_REG = 0;  // Switch back to tile bank
+        }
     }
 
     // The old head cell now becomes a body cell.
     uint8_t old_head_col = old_head_x / 8;
     uint8_t old_head_row = old_head_y / 8;
     bg_grid[old_head_row][old_head_col] = 1;  // snake body
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        bg_attr_grid[old_head_row][old_head_col] = SNAKE_PALETTE;
+    }
+    
     set_bkg_tiles(old_head_col, old_head_row, 1, 1, &bg_grid[old_head_row][old_head_col]);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(old_head_col, old_head_row, 1, 1, &bg_attr_grid[old_head_row][old_head_col]);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 
     // The new head cell is drawn as the head.
     uint8_t new_head_col = snake_x[0] / 8;
     uint8_t new_head_row = snake_y[0] / 8;
     bg_grid[new_head_row][new_head_col] = 0;  // snake head
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        bg_attr_grid[new_head_row][new_head_col] = SNAKE_PALETTE;
+    }
+    
     set_bkg_tiles(new_head_col, new_head_row, 1, 1, &bg_grid[new_head_row][new_head_col]);
+    
+    // Set color attributes for GBC
+    if (_cpu == CGB_TYPE) {
+        VBK_REG = 1;  // Switch to attribute bank
+        set_bkg_tiles(new_head_col, new_head_row, 1, 1, &bg_attr_grid[new_head_row][new_head_col]);
+        VBK_REG = 0;  // Switch back to tile bank
+    }
 }
 
 // -----------------------------------------------------------------------------
