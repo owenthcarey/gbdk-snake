@@ -1,0 +1,74 @@
+name: Build and Deploy GBDK Game
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GBDK-2020
+        env:
+          GBDK_VERSION: 4.0.6
+        run: |
+          set -e
+          wget -q https://github.com/gbdk-2020/gbdk-2020/releases/download/${GBDK_VERSION}/gbdk-linux64.tar.gz
+          tar -xzf gbdk-linux64.tar.gz
+          echo "GBDK_HOME=$PWD/gbdk" >> $GITHUB_ENV
+          echo "$PWD/gbdk/bin" >> $GITHUB_PATH
+
+      - name: Configure
+        run: |
+          cmake -S . -B build
+
+      - name: Build ROM
+        run: |
+          cmake --build build -- -j$(nproc)
+
+      - name: Generate single-file index.html
+        run: |
+          ROM_PATH="build/snake.gb"
+          if [ ! -f "$ROM_PATH" ] && [ -f "snake.gb" ]; then
+            ROM_PATH="snake.gb"
+          fi
+          if [ ! -f "$ROM_PATH" ]; then
+            echo "Could not find ROM at $ROM_PATH or ./snake.gb" >&2
+            echo "Contents of build directory:" >&2
+            ls -la build || true
+            echo "Contents of repo root:" >&2
+            ls -la || true
+            exit 1
+          fi
+          ROM_B64=$(base64 -w 0 "$ROM_PATH")
+          mkdir -p dist
+          sed "s|ROM_BASE64_PLACEHOLDER|$ROM_B64|g" index.template.html > dist/index.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
