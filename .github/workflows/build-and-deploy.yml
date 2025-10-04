@@ -57,6 +57,9 @@ jobs:
           mkdir -p dist
           sed "s|ROM_BASE64_PLACEHOLDER|$ROM_B64|g" index.template.html > dist/index.html
 
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v4
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
