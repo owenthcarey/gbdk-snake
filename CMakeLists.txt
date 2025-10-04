@@ -43,6 +43,7 @@ set(SNAKE_SOURCES
 # Create a dummy executable for CLion's indexer
 # This won't produce a real .gb file. It just lets CLion see includes.
 add_executable(gbdk_snake_dummy ${SNAKE_SOURCES} src/save.c)
+set_target_properties(gbdk_snake_dummy PROPERTIES EXCLUDE_FROM_ALL TRUE EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
 # Tell the host compiler to "pretend" it's SDCC building for Game Boy
 #target_compile_definitions(gbdk_snake_dummy

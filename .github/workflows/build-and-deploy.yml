@@ -37,7 +37,7 @@ jobs:
 
       - name: Build ROM
         run: |
-          cmake --build build -- -j$(nproc)
+          cmake --build build --target snake -- -j$(nproc)
 
       - name: Generate single-file index.html
         run: |
